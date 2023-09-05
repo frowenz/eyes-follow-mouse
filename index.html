@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>You are being watched</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes">
+    <link rel="icon" type="image/x-icon" href="./favicon.png">
+    <style>
+        :root {
+            --numColumns: 1;
+        }
+
+        @media only screen and (min-width: 500px) {
+            :root {
+                --numColumns: 2;
+            }
+        }
+
+        @media only screen and (min-width: 1024px) {
+            :root {
+                --numColumns: 3;
+            }
+        }
+
+        @media only screen and (min-width: 1200px) {
+            :root {
+                --numColumns: 5;
+            }
+        }
+
+        body {
+            /* cursor: none; */
+            margin: 0;
+            /* background-color: rgb(131, 88, 64); */
+            background-color: rgb(156, 111, 83);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #imageGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(calc(100vw / var(--numColumns)), 1fr));
+        }
+
+        img {
+            width: 100%;
+            pointer-events: none;
+            user-select: none;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div id="imageGrid"></div>
+    <script>
+        const personIDs = [
+            "0003",
+            "0002",
+            "0009",
+            "0013",
+            "0014",
+            "0018",
+            "0019",
+            "0020",
+            "0021",
+            "0024",
+            "0027",
+            "0029",
+            "0030",
+            "0031",
+            "0035",
+            "0038",
+            "0042",
+            "0044",
+            "0048",
+            "0049",
+            "0051",
+            "0054",
+            "0056"
+        ];
+
+        let numColumns, imgWidth, numImages;
+        initialize();
+
+        function initialize() {
+            handleWindowResize();
+            window.addEventListener('resize', handleWindowResize);
+            document.addEventListener('mousemove', handleMouseMove);
+        }
+
+        // Calculate the number of images to display
+        function handleWindowResize() {
+            numColumns = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--numColumns'), 10);
+            imgWidth = window.innerWidth / numColumns;
+            const viewportArea = window.innerWidth * window.innerHeight;
+            const imageArea = imgWidth * imgWidth / 5;
+            numImages = Math.floor(viewportArea / imageArea) + numColumns;
+            populateImageGrid();
+        }
+
+        // Adds the required number of images to screen
+        function populateImageGrid() {
+            const container = document.getElementById('imageGrid');
+            for (let i = 0; i < numImages; i++) {
+                const personID = personIDs[i % personIDs.length];
+                const img = createImageElement(personID);
+                container.appendChild(img);
+            }
+        }
+
+        function createImageElement(personID) {
+            const img = document.createElement('img');
+            img.id = personID;
+            img.random = Math.random(); // The trigger point relies on a bit of randomness
+            img.src = generateImgSrc(personID, 0, 0, 0, 0, img.random);  // Initialize
+            return img;
+        }
+
+        // Updates the image source based on mouse position
+        function handleMouseMove(e) {
+            const { clientX: x, clientY: y } = e;
+
+            document.querySelectorAll('#imageGrid img').forEach(img => {
+                const { left: offsetX, top: offsetY, width, height } = img.getBoundingClientRect();
+                img.src = generateImgSrc(img.id, offsetX + width / 2, offsetY + height / 2, x, y, img.random);
+            });
+        }
+
+        function generateImgSrc(id, offsetX, offsetY, mouseX, mouseY, randomVal) {
+            // This is calculating how far from the center of the document the mouse is
+            const adjustedX = Math.max(mouseX - offsetX + window.innerWidth / 2, 0)
+            const adjustedY = Math.max(mouseY - offsetY + window.innerHeight / 2, 0)
+            const hGaze = getBucketValue(adjustedX, window.innerWidth, ['-15H', '-10H', '0H', '10H', '15H'], randomVal);
+            const vGaze = getBucketValue(adjustedY, window.innerHeight, ['10V', '0V', '-10V'], randomVal);
+            const turnVal = getBucketValue(offsetX, window.innerWidth, ['-30P', '-15P', '0P', '15P', '30P']);
+            const newURL = `Cropped/${id}_cropped/${id}_2m_${turnVal}_${vGaze}_${hGaze}.jpg`;
+
+            // Check if the URL is in localStorage
+            const cachedURL = localStorage.getItem(newURL);
+
+            if (cachedURL) {
+                return cachedURL;
+            }
+
+            // Store the new URL in localStorage
+            localStorage.setItem(newURL, newURL);
+
+            return newURL;
+        }
+
+        function getBucketValue(value, maxValue, bucketValues, randomVal = 0) {
+            const randomizedValue = Math.max(0, value + Math.floor(randomVal * 75 - 75 / 2));
+            const bucketSize = maxValue / bucketValues.length;
+            const bucketIndex = Math.min(bucketValues.length - 1, Math.floor(randomizedValue / bucketSize));
+            if (bucketValues[bucketIndex] == undefined) {
+                console.log("-----")
+                console.log(bucketValues)
+                console.log("bucketlength ", bucketValues.length - 1)
+                console.log("index", Math.floor(randomizedValue / bucketSize))
+                console.log("value", randomizedValue)
+                console.log("bucketsize", bucketSize)
+            }
+            return bucketValues[bucketIndex] || bucketValues[0]; // Default to first bucket value if undefined
+        }
+    </script>
+</body>
+
+</html>
